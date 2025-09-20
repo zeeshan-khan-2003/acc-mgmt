@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,11 +13,10 @@ import {
   SelectValue
 } from "@/components/ui/select"
 import { Trash2, Plus } from "lucide-react"
-import { db } from "@/lib/database"
-import Link from "next/link"
 import Formbar from "@/components/formsbar"
 
 export default function PurchaseOrderForm({ onCancel }) {
+  const router = useRouter()
   const [vendors, setVendors] = useState([])
   const [products, setProducts] = useState([])
   const [vendorName, setVendorName] = useState("")
@@ -27,19 +27,46 @@ export default function PurchaseOrderForm({ onCancel }) {
 
   useEffect(() => {
     const loadData = async () => {
-      const [vendorsData, productsData] = await Promise.all([
-        db.getVendors(),
-        db.getProducts()
-      ])
-      setVendors(vendorsData)
-      setProducts(productsData)
+      const token = localStorage.getItem('jwtToken');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      const headers = {
+        'Authorization': `Bearer ${token}`
+      };
+
+      try {
+        const [vendorsResponse, productsResponse] = await Promise.all([
+          fetch('http://127.0.0.1:5000/api/contacts', { headers }),
+          fetch('http://127.0.0.1:5000/api/products', { headers })
+        ]);
+
+        if (vendorsResponse.ok) {
+          const allContacts = await vendorsResponse.json();
+          const vendorContacts = allContacts.filter(c => c.type === 'Vendor' || c.type === 'Both');
+          setVendors(vendorContacts);
+        } else {
+          console.error("Failed to fetch vendors");
+        }
+
+        if (productsResponse.ok) {
+          const productsData = await productsResponse.json();
+          setProducts(productsData);
+        } else {
+          console.error("Failed to fetch products");
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
+      }
 
       setPONumber(
         `PO-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`
       )
     }
     loadData()
-  }, [])
+  }, [router])
 
   const addItem = () => {
     setItems([
@@ -95,7 +122,7 @@ export default function PurchaseOrderForm({ onCancel }) {
     try {
       const token = localStorage.getItem('jwtToken');
       console.log(token)
-      const response = await fetch('http://localhost:5000/api/purchase-orders', {
+      const response = await fetch('http://127.0.0.1:5000/api/purchase-orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -186,13 +213,18 @@ export default function PurchaseOrderForm({ onCancel }) {
 
             <div className="space-y-2">
               <Label htmlFor="vendor-name">Vendor Name</Label>
-              <Input
-                id="vendor-name"
-                value={vendorName}
-                onChange={e => setVendorName(e.target.value)}
-                placeholder="Enter vendor name"
-                required
-              />
+                <Select onValueChange={setVendorName} value={vendorName}>
+                    <SelectTrigger id="vendor-name">
+                        <SelectValue placeholder="Select a vendor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {vendors.map(vendor => (
+                            <SelectItem key={vendor.contact_id} value={vendor.name}>
+                                {vendor.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
 
             <div className="space-y-2">
