@@ -21,8 +21,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-
+import { useRouter } from "next/navigation"
 export default function ChartOfAccounts() {
+    const router = useRouter()
+
   const [accounts, setAccounts] = useState([])
   const [accountName, setAccountName] = useState("")
   const [accountType, setAccountType] = useState("")
@@ -81,9 +83,7 @@ export default function ChartOfAccounts() {
     <div className="p-6 max-w-4xl mx-auto">
       <Card className="shadow-md rounded-2xl">
         <CardHeader className="flex justify-between items-center">
-          <CardTitle className="text-2xl font-semibold">
-            Chart of Accounts
-          </CardTitle>
+
           <div className="flex gap-2">
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
@@ -124,6 +124,12 @@ export default function ChartOfAccounts() {
             </Dialog>
             <Button variant="default">Confirm</Button>
             <Button variant="destructive">Archived</Button>
+          </div>
+
+          {/* Right side buttons */}
+          <div className="flex gap-2">
+            <Button onClick={() => router.push("/admin")}>Home</Button>
+            <Button onClick={() => router.back()}>Back</Button>
           </div>
         </CardHeader>
 
