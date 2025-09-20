@@ -133,7 +133,7 @@ class Payment(db.Model):
     payment_method = db.Column(db.String, nullable=False)
     account_id = db.Column(db.Integer, db.ForeignKey('chart_of_accounts_Master.account_id'))
     __table_args__ = (
-        CheckConstraint("payment_method IN ('Cash', 'Bank')", name='payment_method_check'),
+        # CheckConstraint("payment_method IN ('Cash', 'Bank')", name='payment_method_check'),
         CheckConstraint('invoice_id IS NOT NULL OR bill_id IS NOT NULL', name='payment_invoice_bill_check'),
     )
 

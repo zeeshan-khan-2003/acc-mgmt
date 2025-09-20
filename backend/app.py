@@ -169,6 +169,23 @@ def create_purchase_order():
 
     return jsonify({"msg": "Purchase order created successfully", "po_id": new_po.po_id}), 201
 
+@app.route('/api/purchase-orders', methods=['GET'])
+@jwt_required()
+def get_purchase_orders():
+    purchase_orders = PurchaseOrder.query.all()
+    results = []
+    for po in purchase_orders:
+        vendor = ContactsMaster.query.get(po.vendor_id)
+        results.append({
+            'po_id': po.po_id,
+            'vendor_name': vendor.name if vendor else 'N/A',
+            'order_date': po.order_date.isoformat(),
+            'ref_no': po.ref_no,
+            'status': po.status,
+            'total_amount': po.total_amount
+        })
+    return jsonify(results)
+
 @app.route('/api/vendor-bill/<int:po_id>', methods=['GET'])
 @jwt_required()
 def get_vendor_bill(po_id):
@@ -600,7 +617,16 @@ def delete_customer_invoice(invoice_id):
 @app.route('/api/payments', methods=['GET'])
 @jwt_required()
 def get_payments():
-    payments = Payment.query.all()
+    invoice_id = request.args.get('invoice_id')
+    bill_id = request.args.get('bill_id')
+    
+    query = Payment.query
+    if invoice_id:
+        query = query.filter_by(invoice_id=invoice_id)
+    if bill_id:
+        query = query.filter_by(bill_id=bill_id)
+        
+    payments = query.all()
     return jsonify([{
         'payment_id': payment.payment_id,
         'invoice_id': payment.invoice_id,
@@ -615,15 +641,25 @@ def get_payments():
 @jwt_required()
 def create_payment():
     data = request.get_json()
+    bill_id = data.get('bill_id')
+    
     new_payment = Payment(
         invoice_id=data.get('invoice_id'),
-        bill_id=data.get('bill_id'),
+        bill_id=bill_id,
         payment_date=datetime.fromisoformat(data.get('payment_date')),
         amount=data.get('amount'),
         payment_method=data.get('payment_method'),
         account_id=data.get('account_id')
     )
     db.session.add(new_payment)
+
+    if bill_id:
+        vendor_bill = VendorBill.query.get(bill_id)
+        if vendor_bill and vendor_bill.po_id:
+            purchase_order = PurchaseOrder.query.get(vendor_bill.po_id)
+            if purchase_order:
+                purchase_order.status = 'Billed'
+    
     db.session.commit()
     return jsonify({"msg": "Payment created successfully", "payment_id": new_payment.payment_id}), 201
 
