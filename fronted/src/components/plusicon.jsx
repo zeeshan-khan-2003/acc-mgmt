@@ -10,7 +10,7 @@ export default function StickyExpandableButton() {
     { label: "Contact", onClick: () => router.push("/admin/forms/contact") },
     { label: "Product", onClick: () => router.push("/admin/forms/product") },
     { label: "Taxes", onClick: () => router.push("/admin/forms/taxes") },
-    { label: "COA", onClick: () => router.push("/admin/forms/coa") },
+    { label: "COA", onClick: () => router.push("/admin/coa") },
   ];
 
   return (
