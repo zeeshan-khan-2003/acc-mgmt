@@ -72,7 +72,7 @@ export function NavigationMenuDemo() {
             <ul className="grid gap-2 w-[300px]">
               <li>
                 <NavigationMenuLink asChild>
-                  <Link href="/profit-loss">Profit & Loss</Link>
+                  <Link href="/admin/pnl">Profit & Loss</Link>
                 </NavigationMenuLink>
               </li>
               <li>
@@ -82,7 +82,7 @@ export function NavigationMenuDemo() {
               </li>
               <li>
                 <NavigationMenuLink asChild>
-                  <Link href="/stock-statement">Stock Statement</Link>
+                  <Link href="/admin/ledger">Stock Statement</Link>
                 </NavigationMenuLink>
               </li>
             </ul>
