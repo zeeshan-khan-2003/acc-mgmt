@@ -4,7 +4,11 @@ from flask_jwt_extended import create_access_token, jwt_required, JWTManager
 from werkzeug.security import generate_password_hash
 
 from database import db
-from schema import User, Contact, Product, PurchaseOrder, PurchaseOrderItem, Tax, ChartOfAccount, SalesOrder, SalesOrderItem, VendorBill, CustomerInvoice, Payment, Inventory, GeneralLedger
+from schema import (
+    User, ContactsMaster, ProductMaster, PurchaseOrder, 
+    PurchaseOrderItem, TaxesMaster, ChartOfAccountsMaster, SalesOrder, 
+    SalesOrderItem, VendorBill, CustomerInvoice, Payment, GeneralLedger
+)
 from datetime import datetime
 
 app = Flask(__name__)
@@ -24,7 +28,7 @@ def register():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
-    role = data.get('role', 'Contact') # Default role to contact
+    login_id = data.get('login_id', username) # Default login_id to username
 
     if not username or not password:
         return jsonify({"msg": "Username and password are required"}), 400
@@ -33,7 +37,7 @@ def register():
         return jsonify({"msg": "Username already exists"}), 400
 
     password_hash = generate_password_hash(password)
-    new_user = User(username=username, password_hash=password_hash, role=role)
+    new_user = User(username=username, password_hash=password_hash, login_id=login_id)
     db.session.add(new_user)
     db.session.commit()
 
@@ -51,7 +55,7 @@ def login():
     user = User.query.filter_by(username=username).first()
 
     if user and user.check_password(password):
-        access_token = create_access_token(identity=username, additional_claims={"role": user.role})
+        access_token = create_access_token(identity=username)
         return jsonify(access_token=access_token)
 
     return jsonify({"msg": "Bad username or password"}), 401
@@ -59,17 +63,15 @@ def login():
 @app.route('/api/contacts', methods=['GET'])
 @jwt_required()
 def get_contacts():
-    contacts = Contact.query.all()
+    contacts = ContactsMaster.query.all()
     return jsonify([{
         'contact_id': contact.contact_id,
         'name': contact.name,
-        'type': contact.type,
         'email': contact.email,
         'mobile': contact.mobile,
         'city': contact.city,
         'state': contact.state,
-        'pincode': contact.pincode,
-        'profile_image': contact.profile_image
+        'pincode': contact.pincode
     } for contact in contacts])
 
 @app.route('/api/contacts', methods=['POST'])
@@ -80,20 +82,18 @@ def create_contact():
     mobile = data.get('mobile')
     email = data.get('email')
     city = data.get('city')
-    contact_type = data.get('type', 'Customer')
 
     if not name or not mobile or not email or not city:
         return jsonify({"msg": "Name, mobile, email, and city are required"}), 400
 
-    if Contact.query.filter_by(email=email).first():
+    if ContactsMaster.query.filter_by(email=email).first():
         return jsonify({"msg": "Contact with this email already exists"}), 400
 
-    new_contact = Contact(
+    new_contact = ContactsMaster(
         name=name,
         mobile=mobile,
         email=email,
-        city=city,
-        type=contact_type
+        city=city
     )
     db.session.add(new_contact)
     db.session.commit()
@@ -103,13 +103,14 @@ def create_contact():
 @app.route('/api/products', methods=['GET'])
 @jwt_required()
 def get_products():
-    products = Product.query.all()
+    products = ProductMaster.query.all()
     return jsonify([{
         'product_id': product.product_id,
         'product_name': product.product_name,
         'type': product.type,
         'sales_price': product.sales_price,
         'purchase_price': product.purchase_price,
+        'purchase_tax': product.purchase_tax,
         'hsn_code': product.hsn_code,
         'category': product.category
     } for product in products])
@@ -120,18 +121,20 @@ def create_purchase_order():
     data = request.get_json()
     vendor_name = data.get('vendor_name')
     items = data.get('items')
+    ref_no = data.get('ref_no')
 
     if not vendor_name or not items:
         return jsonify({"msg": "Vendor name and items are required"}), 400
 
-    vendor = Contact.query.filter_by(name=vendor_name).first()
+    vendor = ContactsMaster.query.filter_by(name=vendor_name).first()
     if not vendor:
         return jsonify({"msg": f"Vendor '{vendor_name}' not found"}), 404
 
     new_po = PurchaseOrder(
         vendor_id=vendor.contact_id,
         order_date=datetime.utcnow(),
-        total_amount=data.get('grand_total')
+        total_amount=data.get('grand_total'),
+        ref_no=ref_no
     )
     db.session.add(new_po)
     db.session.commit()
@@ -156,7 +159,7 @@ def get_vendor_bill(po_id):
     if not purchase_order:
         return jsonify({"msg": "Purchase Order not found"}), 404
 
-    vendor = Contact.query.get(purchase_order.vendor_id)
+    vendor = ContactsMaster.query.get(purchase_order.vendor_id)
     if not vendor:
         return jsonify({"msg": "Vendor not found"}), 404
 
@@ -164,7 +167,7 @@ def get_vendor_bill(po_id):
     
     products = []
     for item in po_items:
-        product = Product.query.get(item.product_id)
+        product = ProductMaster.query.get(item.product_id)
         if product:
             products.append({
                 "name": product.product_name,
@@ -175,6 +178,8 @@ def get_vendor_bill(po_id):
     bill_data = {
         "billNo": purchase_order.po_id,
         "vendorName": vendor.name,
+        "vendorId": vendor.contact_id,
+        "totalAmount": purchase_order.total_amount,
         "reference": f"PO#{purchase_order.po_id}",
         "products": products
     }
@@ -189,24 +194,22 @@ def health_check():
 @app.route('/api/taxes', methods=['GET'])
 @jwt_required()
 def get_taxes():
-    taxes = Tax.query.all()
+    taxes = TaxesMaster.query.all()
     return jsonify([{
         'tax_id': tax.tax_id,
         'tax_name': tax.tax_name,
         'computation_method': tax.computation_method,
-        'rate': tax.rate,
-        'applicable_on': tax.applicable_on
+        'rate': tax.rate
     } for tax in taxes])
 
 @app.route('/api/taxes', methods=['POST'])
 @jwt_required()
 def create_tax():
     data = request.get_json()
-    new_tax = Tax(
+    new_tax = TaxesMaster(
         tax_name=data.get('tax_name'),
         computation_method=data.get('computation_method'),
-        rate=data.get('rate'),
-        applicable_on=data.get('applicable_on')
+        rate=data.get('rate')
     )
     db.session.add(new_tax)
     db.session.commit()
@@ -215,35 +218,33 @@ def create_tax():
 @app.route('/api/taxes/<int:tax_id>', methods=['GET'])
 @jwt_required()
 def get_tax(tax_id):
-    tax = Tax.query.get(tax_id)
+    tax = TaxesMaster.query.get(tax_id)
     if not tax:
         return jsonify({"msg": "Tax not found"}), 404
     return jsonify({
         'tax_id': tax.tax_id,
         'tax_name': tax.tax_name,
         'computation_method': tax.computation_method,
-        'rate': tax.rate,
-        'applicable_on': tax.applicable_on
+        'rate': tax.rate
     })
 
 @app.route('/api/taxes/<int:tax_id>', methods=['PUT'])
 @jwt_required()
 def update_tax(tax_id):
-    tax = Tax.query.get(tax_id)
+    tax = TaxesMaster.query.get(tax_id)
     if not tax:
         return jsonify({"msg": "Tax not found"}), 404
     data = request.get_json()
     tax.tax_name = data.get('tax_name', tax.tax_name)
     tax.computation_method = data.get('computation_method', tax.computation_method)
     tax.rate = data.get('rate', tax.rate)
-    tax.applicable_on = data.get('applicable_on', tax.applicable_on)
     db.session.commit()
     return jsonify({"msg": "Tax updated successfully"})
 
 @app.route('/api/taxes/<int:tax_id>', methods=['DELETE'])
 @jwt_required()
 def delete_tax(tax_id):
-    tax = Tax.query.get(tax_id)
+    tax = TaxesMaster.query.get(tax_id)
     if not tax:
         return jsonify({"msg": "Tax not found"}), 404
     db.session.delete(tax)
@@ -254,7 +255,7 @@ def delete_tax(tax_id):
 @app.route('/api/chart-of-accounts', methods=['GET'])
 @jwt_required()
 def get_chart_of_accounts():
-    accounts = ChartOfAccount.query.all()
+    accounts = ChartOfAccountsMaster.query.all()
     return jsonify([{
         'account_id': account.account_id,
         'account_name': account.account_name,
@@ -265,7 +266,7 @@ def get_chart_of_accounts():
 @jwt_required()
 def create_chart_of_account():
     data = request.get_json()
-    new_account = ChartOfAccount(
+    new_account = ChartOfAccountsMaster(
         account_name=data.get('account_name'),
         type=data.get('type')
     )
@@ -276,7 +277,7 @@ def create_chart_of_account():
 @app.route('/api/chart-of-accounts/<int:account_id>', methods=['GET'])
 @jwt_required()
 def get_chart_of_account(account_id):
-    account = ChartOfAccount.query.get(account_id)
+    account = ChartOfAccountsMaster.query.get(account_id)
     if not account:
         return jsonify({"msg": "Chart of Account not found"}), 404
     return jsonify({
@@ -288,7 +289,7 @@ def get_chart_of_account(account_id):
 @app.route('/api/chart-of-accounts/<int:account_id>', methods=['PUT'])
 @jwt_required()
 def update_chart_of_account(account_id):
-    account = ChartOfAccount.query.get(account_id)
+    account = ChartOfAccountsMaster.query.get(account_id)
     if not account:
         return jsonify({"msg": "Chart of Account not found"}), 404
     data = request.get_json()
@@ -300,7 +301,7 @@ def update_chart_of_account(account_id):
 @app.route('/api/chart-of-accounts/<int:account_id>', methods=['DELETE'])
 @jwt_required()
 def delete_chart_of_account(account_id):
-    account = ChartOfAccount.query.get(account_id)
+    account = ChartOfAccountsMaster.query.get(account_id)
     if not account:
         return jsonify({"msg": "Chart of Account not found"}), 404
     db.session.delete(account)
@@ -316,8 +317,9 @@ def get_sales_orders():
         'so_id': so.so_id,
         'customer_id': so.customer_id,
         'order_date': so.order_date.isoformat(),
-        'status': so.status,
-        'total_amount': so.total_amount
+        'status_': so.status_,
+        'total_amount': so.total_amount,
+        'ref_no': so.ref_no
     } for so in sales_orders])
 
 @app.route('/api/sales-orders', methods=['POST'])
@@ -330,14 +332,15 @@ def create_sales_order():
     if not customer_id or not items:
         return jsonify({"msg": "Customer ID and items are required"}), 400
 
-    customer = Contact.query.get(customer_id)
+    customer = ContactsMaster.query.get(customer_id)
     if not customer:
         return jsonify({"msg": f"Customer with ID '{customer_id}' not found"}), 404
 
     new_so = SalesOrder(
         customer_id=customer_id,
         order_date=datetime.utcnow(),
-        total_amount=data.get('total_amount')
+        total_amount=data.get('total_amount'),
+        ref_no=data.get('ref_no')
     )
     db.session.add(new_so)
     db.session.commit()
@@ -376,8 +379,9 @@ def get_sales_order(so_id):
         'so_id': sales_order.so_id,
         'customer_id': sales_order.customer_id,
         'order_date': sales_order.order_date.isoformat(),
-        'status': sales_order.status,
+        'status_': sales_order.status_,
         'total_amount': sales_order.total_amount,
+        'ref_no': sales_order.ref_no,
         'items': items_data
     })
 
@@ -390,14 +394,12 @@ def update_sales_order(so_id):
     data = request.get_json()
     sales_order.customer_id = data.get('customer_id', sales_order.customer_id)
     sales_order.order_date = datetime.fromisoformat(data.get('order_date')) if data.get('order_date') else sales_order.order_date
-    sales_order.status = data.get('status', sales_order.status)
+    sales_order.status_ = data.get('status_', sales_order.status_)
     sales_order.total_amount = data.get('total_amount', sales_order.total_amount)
+    sales_order.ref_no = data.get('ref_no', sales_order.ref_no)
 
-    # Update items if provided
     if 'items' in data:
-        # Delete existing items
         SalesOrderItem.query.filter_by(so_id=so_id).delete()
-        # Add new items
         for item_data in data['items']:
             new_so_item = SalesOrderItem(
                 so_id=so_id,
@@ -429,9 +431,10 @@ def delete_sales_order(so_id):
 def get_vendor_bills():
     vendor_bills = VendorBill.query.all()
     return jsonify([{
-        'bill_id': bill.bill_id,
+        'bill_ref_id': bill.bill_ref_id,
         'po_id': bill.po_id,
         'vendor_id': bill.vendor_id,
+        'bill_ref_no': bill.bill_ref_no,
         'bill_date': bill.bill_date.isoformat(),
         'due_date': bill.due_date.isoformat(),
         'total_amount': bill.total_amount,
@@ -448,32 +451,34 @@ def create_vendor_bill():
         bill_date=datetime.fromisoformat(data.get('bill_date')),
         due_date=datetime.fromisoformat(data.get('due_date')),
         total_amount=data.get('total_amount'),
-        status=data.get('status', 'Unpaid')
+        status=data.get('status', 'Unpaid'),
+        bill_ref_no=data.get('bill_ref_no')
     )
     db.session.add(new_bill)
     db.session.commit()
-    return jsonify({"msg": "Vendor Bill created successfully", "bill_id": new_bill.bill_id}), 201
+    return jsonify({"msg": "Vendor Bill created successfully", "bill_ref_id": new_bill.bill_ref_id}), 201
 
-@app.route('/api/vendor-bills/<int:bill_id>', methods=['GET'])
+@app.route('/api/vendor-bills/<int:bill_ref_id>', methods=['GET'])
 @jwt_required()
-def get_vendor_bill_by_id(bill_id):
-    bill = VendorBill.query.get(bill_id)
+def get_vendor_bill_by_id(bill_ref_id):
+    bill = VendorBill.query.get(bill_ref_id)
     if not bill:
         return jsonify({"msg": "Vendor Bill not found"}), 404
     return jsonify({
-        'bill_id': bill.bill_id,
+        'bill_ref_id': bill.bill_ref_id,
         'po_id': bill.po_id,
         'vendor_id': bill.vendor_id,
+        'bill_ref_no': bill.bill_ref_no,
         'bill_date': bill.bill_date.isoformat(),
         'due_date': bill.due_date.isoformat(),
         'total_amount': bill.total_amount,
         'status': bill.status
     })
 
-@app.route('/api/vendor-bills/<int:bill_id>', methods=['PUT'])
+@app.route('/api/vendor-bills/<int:bill_ref_id>', methods=['PUT'])
 @jwt_required()
-def update_vendor_bill(bill_id):
-    bill = VendorBill.query.get(bill_id)
+def update_vendor_bill(bill_ref_id):
+    bill = VendorBill.query.get(bill_ref_id)
     if not bill:
         return jsonify({"msg": "Vendor Bill not found"}), 404
     data = request.get_json()
@@ -483,13 +488,14 @@ def update_vendor_bill(bill_id):
     bill.due_date = datetime.fromisoformat(data.get('due_date')) if data.get('due_date') else bill.due_date
     bill.total_amount = data.get('total_amount', bill.total_amount)
     bill.status = data.get('status', bill.status)
+    bill.bill_ref_no = data.get('bill_ref_no', bill.bill_ref_no)
     db.session.commit()
     return jsonify({"msg": "Vendor Bill updated successfully"})
 
-@app.route('/api/vendor-bills/<int:bill_id>', methods=['DELETE'])
+@app.route('/api/vendor-bills/<int:bill_ref_id>', methods=['DELETE'])
 @jwt_required()
-def delete_vendor_bill(bill_id):
-    bill = VendorBill.query.get(bill_id)
+def delete_vendor_bill(bill_ref_id):
+    bill = VendorBill.query.get(bill_ref_id)
     if not bill:
         return jsonify({"msg": "Vendor Bill not found"}), 404
     db.session.delete(bill)
@@ -505,6 +511,7 @@ def get_customer_invoices():
         'invoice_id': invoice.invoice_id,
         'so_id': invoice.so_id,
         'customer_id': invoice.customer_id,
+        'ref_no': invoice.ref_no,
         'invoice_date': invoice.invoice_date.isoformat(),
         'due_date': invoice.due_date.isoformat(),
         'total_amount': invoice.total_amount,
@@ -521,7 +528,8 @@ def create_customer_invoice():
         invoice_date=datetime.fromisoformat(data.get('invoice_date')),
         due_date=datetime.fromisoformat(data.get('due_date')),
         total_amount=data.get('total_amount'),
-        status=data.get('status', 'Unpaid')
+        status=data.get('status', 'Unpaid'),
+        ref_no=data.get('ref_no')
     )
     db.session.add(new_invoice)
     db.session.commit()
@@ -537,6 +545,7 @@ def get_customer_invoice(invoice_id):
         'invoice_id': invoice.invoice_id,
         'so_id': invoice.so_id,
         'customer_id': invoice.customer_id,
+        'ref_no': invoice.ref_no,
         'invoice_date': invoice.invoice_date.isoformat(),
         'due_date': invoice.due_date.isoformat(),
         'total_amount': invoice.total_amount,
@@ -556,6 +565,7 @@ def update_customer_invoice(invoice_id):
     invoice.due_date = datetime.fromisoformat(data.get('due_date')) if data.get('due_date') else invoice.due_date
     invoice.total_amount = data.get('total_amount', invoice.total_amount)
     invoice.status = data.get('status', invoice.status)
+    invoice.ref_no = data.get('ref_no', invoice.ref_no)
     db.session.commit()
     return jsonify({"msg": "Customer Invoice updated successfully"})
 
@@ -641,66 +651,6 @@ def delete_payment(payment_id):
     db.session.delete(payment)
     db.session.commit()
     return jsonify({"msg": "Payment deleted successfully"})
-
-
-@app.route('/api/inventory', methods=['GET'])
-@jwt_required()
-def get_inventory():
-    inventory_items = Inventory.query.all()
-    return jsonify([{
-        'inventory_id': item.inventory_id,
-        'product_id': item.product_id,
-        'quantity_on_hand': item.quantity_on_hand,
-        'last_updated': item.last_updated.isoformat()
-    } for item in inventory_items])
-
-@app.route('/api/inventory', methods=['POST'])
-@jwt_required()
-def create_inventory_item():
-    data = request.get_json()
-    new_item = Inventory(
-        product_id=data.get('product_id'),
-        quantity_on_hand=data.get('quantity_on_hand', 0)
-    )
-    db.session.add(new_item)
-    db.session.commit()
-    return jsonify({"msg": "Inventory item created successfully", "inventory_id": new_item.inventory_id}), 201
-
-@app.route('/api/inventory/<int:inventory_id>', methods=['GET'])
-@jwt_required()
-def get_inventory_item(inventory_id):
-    item = Inventory.query.get(inventory_id)
-    if not item:
-        return jsonify({"msg": "Inventory item not found"}), 404
-    return jsonify({
-        'inventory_id': item.inventory_id,
-        'product_id': item.product_id,
-        'quantity_on_hand': item.quantity_on_hand,
-        'last_updated': item.last_updated.isoformat()
-    })
-
-@app.route('/api/inventory/<int:inventory_id>', methods=['PUT'])
-@jwt_required()
-def update_inventory_item(inventory_id):
-    item = Inventory.query.get(inventory_id)
-    if not item:
-        return jsonify({"msg": "Inventory item not found"}), 404
-    data = request.get_json()
-    item.product_id = data.get('product_id', item.product_id)
-    item.quantity_on_hand = data.get('quantity_on_hand', item.quantity_on_hand)
-    item.last_updated = datetime.utcnow() # Update timestamp on change
-    db.session.commit()
-    return jsonify({"msg": "Inventory item updated successfully"})
-
-@app.route('/api/inventory/<int:inventory_id>', methods=['DELETE'])
-@jwt_required()
-def delete_inventory_item(inventory_id):
-    item = Inventory.query.get(inventory_id)
-    if not item:
-        return jsonify({"msg": "Inventory item not found"}), 404
-    db.session.delete(item)
-    db.session.commit()
-    return jsonify({"msg": "Inventory item deleted successfully"})
 
 
 @app.route('/api/general-ledger', methods=['GET'])
