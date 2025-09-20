@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -26,12 +26,54 @@ export default function ChartOfAccounts() {
   const [accounts, setAccounts] = useState([])
   const [accountName, setAccountName] = useState("")
   const [accountType, setAccountType] = useState("")
+  const [open, setOpen] = useState(false)
 
-  const addAccount = () => {
+  const fetchAccounts = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/api/chart-of-accounts", {
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`,
+        },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setAccounts(data)
+      } else {
+        console.error("Failed to fetch accounts")
+      }
+    } catch (error) {
+      console.error("Error fetching accounts:", error)
+    }
+  }
+
+  useEffect(() => {
+    fetchAccounts()
+  }, [])
+
+  const addAccount = async () => {
     if (accountName && accountType) {
-      setAccounts([...accounts, { name: accountName, type: accountType }])
-      setAccountName("")
-      setAccountType("")
+      const newAccount = { account_name: accountName, type: accountType }
+      try {
+        const response = await fetch("http://127.0.0.1:5000/api/chart-of-accounts", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`,
+          },
+          body: JSON.stringify(newAccount),
+        })
+
+        if (response.ok) {
+          setAccountName("")
+          setAccountType("")
+          fetchAccounts() // Refetch accounts after adding a new one
+          setOpen(false) // Close the dialog
+        } else {
+          console.error("Failed to add account")
+        }
+      } catch (error) {
+        console.error("Error adding account:", error)
+      }
     }
   }
 
@@ -43,7 +85,7 @@ export default function ChartOfAccounts() {
             Chart of Accounts
           </CardTitle>
           <div className="flex gap-2">
-            <Dialog>
+            <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button variant="secondary">New</Button>
               </DialogTrigger>
@@ -68,10 +110,11 @@ export default function ChartOfAccounts() {
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Assets">Assets</SelectItem>
-                        <SelectItem value="Liabilities">Liabilities</SelectItem>
+                        <SelectItem value="Asset">Asset</SelectItem>
+                        <SelectItem value="Liability">Liability</SelectItem>
                         <SelectItem value="Income">Income</SelectItem>
                         <SelectItem value="Expense">Expense</SelectItem>
+                        <SelectItem value="Equity">Equity</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -81,8 +124,6 @@ export default function ChartOfAccounts() {
             </Dialog>
             <Button variant="default">Confirm</Button>
             <Button variant="destructive">Archived</Button>
-            <Button variant="outline">Home</Button>
-            <Button variant="outline">Back</Button>
           </div>
         </CardHeader>
 
@@ -104,7 +145,7 @@ export default function ChartOfAccounts() {
               ) : (
                 accounts.map((acc, idx) => (
                   <TableRow key={idx}>
-                    <TableCell>{acc.name}</TableCell>
+                    <TableCell>{acc.account_name}</TableCell>
                     <TableCell>{acc.type}</TableCell>
                   </TableRow>
                 ))
