@@ -11,16 +11,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useRouter } from "next/navigation"
 
 export default function BalanceSheet() {
   const [liabilities, setLiabilities] = useState([])
   const [assets, setAssets] = useState([])
-
+  const router = useRouter()
   // Example API call
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch("/api/balance-sheet") // backend endpoint
+        const token = localStorage.getItem('jwtToken');
+        if (!token) {
+          // Handle missing token, e.g. redirect to login
+          return;
+        }
+
+        const res = await fetch("http://127.0.0.1:5000/api/balance-sheet", { 
+            headers: { 'Authorization': `Bearer ${token}` }
+        }) 
         const data = await res.json()
         setLiabilities(data.liabilities || [])
         setAssets(data.assets || [])
@@ -49,9 +58,8 @@ export default function BalanceSheet() {
           </CardTitle>
           <div className="flex gap-2">
             <Button variant="secondary">Print</Button>
-            <Button variant="outline">Home</Button>
-            <Button variant="outline">Back</Button>
-            <Button variant="default">Date</Button>
+            <Button onClick={() => router.push('/admin')} variant="default">Home</Button>
+            <Button onClick={() => router.back()} variant="outline">Back</Button>
           </div>
         </CardHeader>
 
