@@ -44,9 +44,8 @@ export default function PurchaseOrderForm({ onCancel }) {
         ]);
 
         if (vendorsResponse.ok) {
-          const allContacts = await vendorsResponse.json();
-          const vendorContacts = allContacts.filter(c => c.type === 'Vendor' || c.type === 'Both');
-          setVendors(vendorContacts);
+          const allContacts  = await vendorsResponse.json();
+          setVendors(allContacts);
         } else {
           console.error("Failed to fetch vendors");
         }
@@ -146,7 +145,7 @@ export default function PurchaseOrderForm({ onCancel }) {
         localStorage.setItem('vendorBillData', JSON.stringify(billData));
 
         // Redirect
-        router.push('/vendorbill');
+        router.push('/vendorbill?po_id=' + data.po_id);
       } else {
         alert(`Error: ${data.msg}`);
       }
@@ -171,7 +170,7 @@ export default function PurchaseOrderForm({ onCancel }) {
     handleCreatePurchaseOrder({
       po_number: poNumber,
       vendor_name: vendorName.trim(),
-      ref_number: refNumber.trim(),
+      ref_no: refNumber.trim(),
       total_amount: totalUntaxed,
       tax_rate: null, // no global tax rate now, tax per item
       tax_amount: totalTax,

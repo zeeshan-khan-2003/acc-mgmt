@@ -16,7 +16,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export function LoginForm({ className, ...props }) {
-  const [formData, setFormData] = useState({ loginId: "", password: "" });
+  const [formData, setFormData] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
   const router = useRouter();
 
@@ -30,7 +30,7 @@ export function LoginForm({ className, ...props }) {
     e.preventDefault();
 
     // Basic validation
-    if (!formData.loginId || !formData.password) {
+    if (!formData.username || !formData.password) {
       setError("Please fill in both fields.");
       return;
     }
@@ -42,7 +42,7 @@ export function LoginForm({ className, ...props }) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          loginId : formData.loginId,
+          username : formData.username,
           password: formData.password,
         }),
       });
@@ -84,12 +84,12 @@ export function LoginForm({ className, ...props }) {
           <form onSubmit={handleSubmit}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-3">
-                <Label htmlFor="loginId">Login ID</Label>
+                <Label htmlFor="username">Login ID</Label>
                 <Input
-                  id="loginId"
+                  id="username"
                   type="text"
                   placeholder="Enter login ID"
-                  value={formData.loginId}
+                  value={formData.username}
                   onChange={handleChange}
                   required
                 />

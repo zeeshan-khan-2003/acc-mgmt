@@ -41,9 +41,9 @@ export default function SignUp() {
   function handleSubmit(e) {
     e.preventDefault();
 
-    const { name, role, loginId, password, confirmPassword, email } = formData;
+    const { name, loginId, password, confirmPassword, email } = formData;
 
-    if (!name || !role || !loginId || !password || !email) {
+    if (!name || !loginId || !password || !email) {
       alert("Please fill all the fields");
       return;
     }
@@ -52,10 +52,36 @@ export default function SignUp() {
       return;
     }
 
-    // Submit logic here (e.g. call API)
-    alert("User created successfully!");
+    const registerUser = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/register`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    username: name,
+                    login_id: loginId,
+                    password: password,
+                }),
+            });
 
-    clearForm();
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.msg || "Registration failed");
+                return;
+            }
+
+            alert("User created successfully!");
+            clearForm();
+        } catch (err) {
+            console.error("Registration error:", err);
+            alert("Something went wrong. Please try again.");
+        }
+    };
+
+    registerUser();
   }
 
   return (
@@ -78,18 +104,6 @@ export default function SignUp() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Input
-                  id="role"
-                  placeholder="Admin"
-                  required
-                  value={formData.role}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
                 <Label htmlFor="loginId">Login ID</Label>
                 <Input
                   id="loginId"
@@ -99,6 +113,8 @@ export default function SignUp() {
                   onChange={handleChange}
                 />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <Input
@@ -107,19 +123,6 @@ export default function SignUp() {
                   placeholder="••••••••"
                   required
                   value={formData.password}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="john@example.com"
-                  required
-                  value={formData.email}
                   onChange={handleChange}
                 />
               </div>
@@ -135,6 +138,17 @@ export default function SignUp() {
                 />
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="john@example.com"
+                required
+                value={formData.email}
+                onChange={handleChange}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <Button type="submit">Create</Button>
               <Button type="button" onClick={clearForm}>
@@ -143,15 +157,6 @@ export default function SignUp() {
             </div>
           </form>
         </CardContent>
-        {/* <CardFooter>
-          <p>
-            Already have an account
-            <Link href="/login" scroll={false}>
-              {" "}
-               login
-            </Link>
-          </p>
-        </CardFooter> */}
       </Card>
     </div>
   );

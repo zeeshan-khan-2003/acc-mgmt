@@ -105,8 +105,7 @@ export default function Page() {
           name: formData.Contactname,
           mobile: formData.phoneNumber,
           email: formData.email,
-          city: formData.Adress, // Mapping Adress to city for now
-          type: 'Customer' // Defaulting type to Customer
+          city: formData.Adress // Mapping Adress to city for now
         })
       })
 
