@@ -48,17 +48,17 @@ export function NavigationMenuDemo() {
             <ul className="grid gap-2 w-[300px]">
               <li>
                 <NavigationMenuLink asChild>
-                  <Link href="/sale-order">Sale Order</Link>
+                  <Link href="/sales-order">Sale Order</Link>
                 </NavigationMenuLink>
               </li>
               <li>
                 <NavigationMenuLink asChild>
-                  <Link href="/sale-invoice">Sale Invoice</Link>
+                  <Link href="/sales-invoice">Sale Invoice</Link>
                 </NavigationMenuLink>
               </li>
               <li>
                 <NavigationMenuLink asChild>
-                  <Link href="/receipt">Receipt</Link>
+                  <Link href="/payment">Receipt</Link>
                 </NavigationMenuLink>
               </li>
             </ul>
@@ -77,7 +77,7 @@ export function NavigationMenuDemo() {
               </li>
               <li>
                 <NavigationMenuLink asChild>
-                  <Link href="/balance-sheet">Balance Sheet</Link>
+                  <Link href="/admin/balance-sheet">Balance Sheet</Link>
                 </NavigationMenuLink>
               </li>
               <li>
