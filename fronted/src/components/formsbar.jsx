@@ -11,7 +11,7 @@ export default function Formbar() {
     <nav className="w-full flex justify-between items-center px-6 py-4 border-b bg-white">
       {/* Left side */}
       <div>
-        <Button>New</Button>
+        <Button onClick={() => router.push('/purchase-order')}>New</Button>
       </div>
 
       {/* Right side */}
