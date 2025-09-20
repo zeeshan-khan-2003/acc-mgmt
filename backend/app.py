@@ -115,6 +115,23 @@ def get_products():
         'category': product.category
     } for product in products])
 
+@app.route('/api/products', methods=['POST'])
+@jwt_required()
+def create_product():
+    data = request.get_json()
+    new_product = ProductMaster(
+        product_name=data.get('product_name'),
+        type=data.get('type'),
+        sales_price=data.get('sales_price'),
+        purchase_price=data.get('purchase_price'),
+        purchase_tax=data.get('purchase_tax'),
+        hsn_code=data.get('hsn_code'),
+        category=data.get('category')
+    )
+    db.session.add(new_product)
+    db.session.commit()
+    return jsonify({"msg": "Product created successfully", "product_id": new_product.product_id}), 201
+
 @app.route('/api/purchase-orders', methods=['POST'])
 @jwt_required()
 def create_purchase_order():
@@ -728,6 +745,21 @@ def delete_general_ledger_entry(entry_id):
     db.session.delete(entry)
     db.session.commit()
     return jsonify({"msg": "General Ledger entry deleted successfully"})
+
+@app.route('/api/hsn-codes', methods=['GET'])
+def get_hsn_codes():
+    mock_hsn_codes = [
+        {"hsn_code": "851712", "description": "Telephones for cellular networks or for other wireless networks"},
+        {"hsn_code": "998314", "description": "IT (Information Technology) design and development services"},
+        {"hsn_code": "490110", "description": "Printed books, brochures, leaflets and similar printed matter, whether or not in single sheets"}
+    ]
+    return jsonify(mock_hsn_codes)
+
+@app.route('/api/categories', methods=['GET'])
+def get_categories():
+    categories = db.session.query(ProductMaster.category).distinct().all()
+    category_list = [category[0] for category in categories if category[0] is not None]
+    return jsonify(category_list)
 
 if __name__ == '__main__':
     app.run(debug=True)
