@@ -2,32 +2,42 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Button } from '@/components/ui/button'; // shadcn button
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import Formbar from '@/components/formsbar';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function VendorBill() {
+  const [view, setView] = useState('loading'); // 'list', 'detail', 'loading'
   const [billData, setBillData] = useState(null);
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const poId = searchParams.get('po_id');
 
   useEffect(() => {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      alert('Please login to view this page.');
+      router.push('/login');
+      return;
+    }
+    const headers = { 'Authorization': `Bearer ${token}` };
+
     if (poId) {
+      setView('detail');
       const fetchBillData = async () => {
         try {
-          const token = localStorage.getItem('jwtToken');
-          if (!token) {
-            alert('Please login to view this page.');
-            router.push('/login');
-            return;
-          }
-
-          const response = await fetch(`http://localhost:5000/api/vendor-bill/${poId}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
+          const response = await fetch(`http://localhost:5000/api/vendor-bill/${poId}`, { headers });
 
           if (response.ok) {
             const data = await response.json();
@@ -43,11 +53,23 @@ export default function VendorBill() {
           router.push('/purchase-order');
         }
       };
-
       fetchBillData();
     } else {
-      alert('No purchase order ID found. Redirecting...');
-      router.push('/purchase-order');
+      setView('list');
+      const fetchPurchaseOrders = async () => {
+        try {
+          const response = await fetch(`http://localhost:5000/api/purchase-orders`, { headers });
+          if (response.ok) {
+            const data = await response.json();
+            setPurchaseOrders(data);
+          } else {
+            console.error("Failed to fetch purchase orders");
+          }
+        } catch (error) {
+          console.error('Error fetching purchase orders:', error);
+        }
+      };
+      fetchPurchaseOrders();
     }
   }, [poId, router]);
 
@@ -55,10 +77,8 @@ export default function VendorBill() {
     if (!billData) return;
 
     const doc = new jsPDF();
-
     doc.setFontSize(18);
     doc.text('Vendor Bill', 14, 22);
-
     doc.setFontSize(12);
     doc.text(`Bill No: ${billData.billNo}`, 14, 32);
     doc.text(`Vendor: ${billData.vendorName}`, 14, 40);
@@ -71,7 +91,7 @@ export default function VendorBill() {
         i + 1,
         p.name,
         p.quantity,
-        `$${p.price}`,
+        `$${p.price.toFixed(2)}`,
         `$${(p.quantity * p.price).toFixed(2)}`
       ])
     });
@@ -90,7 +110,6 @@ export default function VendorBill() {
         return;
       }
 
-      // First, create a vendor bill
       const billPayload = {
         po_id: poId,
         vendor_id: billData.vendorId,
@@ -111,7 +130,6 @@ export default function VendorBill() {
 
       if (response.ok) {
         const newBill = await response.json();
-        // Now redirect to payment page with the new bill_id
         router.push(`/payment?bill_id=${newBill.bill_ref_id}`);
       } else {
         const errorData = await response.json();
@@ -123,49 +141,120 @@ export default function VendorBill() {
     }
   };
 
-  if (!billData) {
-    return <p>Loading vendor bill...</p>;
+  if (view === 'loading') {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
+  
+  if (view === 'list') {
+      return (
+          <>
+            <Formbar />
+            <div className="max-w-6xl mx-auto p-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Purchase Orders</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>PO ID</TableHead>
+                                    <TableHead>Vendor</TableHead>
+                                    <TableHead>Order Date</TableHead>
+                                    <TableHead className="text-right">Total</TableHead>
+                                    <TableHead>Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {purchaseOrders.map(po => (
+                                    <TableRow key={po.po_id} onClick={() => router.push(`/vendorbill?po_id=${po.po_id}`)} className="cursor-pointer">
+                                        <TableCell>{po.po_id}</TableCell>
+                                        <TableCell>{po.vendor_name}</TableCell>
+                                        <TableCell>{new Date(po.order_date).toLocaleDateString()}</TableCell>
+                                        <TableCell className="text-right">${po.total_amount.toFixed(2)}</TableCell>
+                                        <TableCell>{po.status}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </div>
+          </>
+      )
+  }
+
+  if (view === 'detail' && !billData) {
+    return <div className="flex justify-center items-center h-screen">Loading vendor bill...</div>;
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Vendor Bill</h1>
-        <div className="space-x-4">
-          <Button onClick={handleGeneratePDF} variant="outline">Generate PDF</Button>
-          <Button onClick={handlePayment}>Pay</Button>
-        </div>
-      </div>
+    <>
+      <Formbar />
+      <div className="p-6">
+        <Card className="w-full max-w-4xl mx-auto shadow-lg rounded-2xl">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-2xl font-bold">Vendor Bill</CardTitle>
+            <div className="space-x-2">
+              <Button onClick={handleGeneratePDF} variant="outline">Generate PDF</Button>
+              <Button onClick={handlePayment}>Pay</Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 mb-6 border-b pb-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Bill No</p>
+                <p className="font-semibold">{billData.billNo}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Vendor</p>
+                <p className="font-semibold">{billData.vendorName}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Reference</p>
+                <p className="font-semibold">{billData.reference}</p>
+              </div>
+            </div>
 
-      <div className="space-y-2">
-        <p><strong>Bill No:</strong> {billData.billNo}</p>
-        <p><strong>Vendor:</strong> {billData.vendorName}</p>
-        <p><strong>Reference:</strong> {billData.reference}</p>
-      </div>
+            <h3 className="text-lg font-semibold mb-2">Products</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">#</TableHead>
+                  <TableHead>Product Name</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Price</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {billData.products.map((product, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{product.name}</TableCell>
+                    <TableCell className="text-right">{product.quantity}</TableCell>
+                    <TableCell className="text-right">${product.price.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">${(product.quantity * product.price).toFixed(2)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
 
-      <h2 className="text-xl font-semibold mt-6 mb-2">Products</h2>
-      <table className="w-full border border-gray-300">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="border px-4 py-2">#</th>
-            <th className="border px-4 py-2">Product Name</th>
-            <th className="border px-4 py-2">Qty</th>
-            <th className="border px-4 py-2">Price</th>
-            <th className="border px-4 py-2">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {billData.products.map((product, index) => (
-            <tr key={index}>
-              <td className="border px-4 py-2">{index + 1}</td>
-              <td className="border px-4 py-2">{product.name}</td>
-              <td className="border px-4 py-2">{product.quantity}</td>
-              <td className="border px-4 py-2">${product.price}</td>
-              <td className="border px-4 py-2">${(product.quantity * product.price).toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+            <div className="flex justify-end mt-6">
+              <div className="w-full max-w-xs">
+                  <Card className="p-4 bg-muted/50">
+                    <div className="space-y-2">
+                      <div className="flex justify-between font-semibold text-lg">
+                        <span>Grand Total:</span>
+                        <span>${billData.totalAmount.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </Card>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }
