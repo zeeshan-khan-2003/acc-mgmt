@@ -50,7 +50,7 @@ export default function ProductMaster() {
       category: category,
       hsn_code: hsn,
       sales_price: parseFloat(salesPrice),
-      // sales_tax: parseFloat(salesTax), // sales_tax is not in the model
+      // sales_tax: parseFloat(salesTax),
       purchase_price: parseFloat(purchasePrice),
       purchase_tax: parseFloat(purchaseTax),
     }
@@ -60,7 +60,7 @@ export default function ProductMaster() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // "Authorization": "Bearer YOUR_JWT_TOKEN" 
+          "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`,
         },
         body: JSON.stringify(productData),
       })
@@ -109,11 +109,11 @@ export default function ProductMaster() {
                 className="flex gap-6 mt-1"
               >
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="goods" id="goods" />
+                  <RadioGroupItem value="Goods" id="goods" />
                   <Label htmlFor="goods">Goods</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="service" id="service" />
+                  <RadioGroupItem value="Service" id="service" />
                   <Label htmlFor="service">Service</Label>
                 </div>
               </RadioGroup>
