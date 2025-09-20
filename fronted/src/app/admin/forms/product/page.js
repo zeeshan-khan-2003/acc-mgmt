@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 
 export default function ProductMaster() {
   const [productName, setProductName] = useState("")
@@ -19,7 +20,7 @@ export default function ProductMaster() {
   const [purchaseTax, setPurchaseTax] = useState("")
   const [categories, setCategories] = useState([])
   const [hsnCodes, setHsnCodes] = useState([])
-
+  const router = useRouter()
   useEffect(() => {
     // Fetch categories from backend
     // For now, using mock data
@@ -68,6 +69,7 @@ export default function ProductMaster() {
       if (response.ok) {
         const data = await response.json()
         console.log("Product created:", data)
+        router.push("/admin")
         // Handle success (e.g., show a success message, redirect)
       } else {
         console.error("Failed to create product")
