@@ -93,7 +93,8 @@ export default function PurchaseOrderForm({ onCancel }) {
   }
   const handleCreatePurchaseOrder = async (purchaseOrderData) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('jwtToken');
+      console.log(token)
       const response = await fetch('http://localhost:5000/api/purchase-orders', {
         method: 'POST',
         headers: {
