@@ -7,7 +7,7 @@ export default function StickyExpandableButton() {
   const [open, setOpen] = useState(false);
 
   const items = [
-    { label: "Card", onClick: () => alert("Card clicked") },
+    { label: "Contact", onClick: () => alert("Card clicked") },
     { label: "Product", onClick: () => alert("Product clicked") },
     { label: "Taxes", onClick: () => alert("Taxes clicked") },
     { label: "COA", onClick: () => alert("COA clicked") },

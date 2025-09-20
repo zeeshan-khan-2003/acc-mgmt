@@ -29,7 +29,7 @@ export function NavigationMenuDemo() {
               </li>
               <li>
                 <NavigationMenuLink asChild>
-                  <Link href="/purchase-bill">Purchase Bill</Link>
+                  <Link href="/vendorbill">Purchase Bill</Link>
                 </NavigationMenuLink>
               </li>
               <li>
