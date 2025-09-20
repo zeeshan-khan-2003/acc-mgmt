@@ -124,7 +124,7 @@ export function LoginForm({ className, ...props }) {
             </div>
             <div className="mt-4 text-center text-sm">
               Don&apos;t have an account?{" "}
-              <Link href="/signup">Sign up</Link>
+              <Link href="/">Sign up</Link>
             </div>
           </form>
         </CardContent>
