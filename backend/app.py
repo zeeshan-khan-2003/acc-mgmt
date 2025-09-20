@@ -907,3 +907,85 @@ def get_dashboard_stats():
             '30d': total_payment_30d
         }
     })
+
+@app.route('/api/partner-ledger', methods=['GET'])
+@jwt_required()
+def get_partner_ledger():
+    contact_id = request.args.get('contact_id')
+    ledger_type = request.args.get('type') # 'receivable' or 'payable'
+
+    if not contact_id or not ledger_type:
+        return jsonify({"msg": "contact_id and type are required"}), 400
+
+    contact_id = int(contact_id)
+    transactions = []
+
+    if ledger_type == 'receivable':
+        invoices = CustomerInvoice.query.filter_by(customer_id=contact_id).all()
+        for inv in invoices:
+            transactions.append({
+                'date': inv.invoice_date,
+                'description': f"Invoice #{inv.invoice_id}",
+                'debit': inv.total_amount,
+                'credit': 0
+            })
+            payments = Payment.query.filter_by(invoice_id=inv.invoice_id).all()
+            for p in payments:
+                transactions.append({
+                    'date': p.payment_date,
+                    'description': f"Payment for Invoice #{inv.invoice_id}",
+                    'debit': 0,
+                    'credit': p.amount
+                })
+    elif ledger_type == 'payable':
+        bills = VendorBill.query.filter_by(vendor_id=contact_id).all()
+        for bill in bills:
+            transactions.append({
+                'date': bill.bill_date,
+                'description': f"Bill #{bill.bill_ref_id}",
+                'debit': 0,
+                'credit': bill.total_amount
+            })
+            payments = Payment.query.filter_by(bill_id=bill.bill_ref_id).all()
+            for p in payments:
+                transactions.append({
+                    'date': p.payment_date,
+                    'description': f"Payment for Bill #{bill.bill_ref_id}",
+                    'debit': p.amount,
+                    'credit': 0
+                })
+    
+    transactions.sort(key=lambda x: x['date'])
+
+    balance = 0
+    for t in transactions:
+        balance += t['debit'] - t['credit']
+        t['balance'] = balance
+        t['date'] = t['date'].isoformat()
+
+    return jsonify(transactions)
+
+@app.route('/api/pnl', methods=['GET'])
+@jwt_required()
+def get_pnl():
+    accounts = ChartOfAccountsMaster.query.filter(ChartOfAccountsMaster.type.in_(['Income', 'Expense'])).all()
+    
+    income = []
+    expenses = []
+
+    for acc in accounts:
+        debit_total = db.session.query(func.sum(GeneralLedger.debit)).filter(GeneralLedger.account_id == acc.account_id).scalar() or 0
+        credit_total = db.session.query(func.sum(GeneralLedger.credit)).filter(GeneralLedger.account_id == acc.account_id).scalar() or 0
+
+        balance = 0
+        if acc.type == 'Expense':
+            balance = debit_total - credit_total
+            expenses.append({'name': acc.account_name, 'amount': balance})
+        elif acc.type == 'Income':
+            balance = credit_total - debit_total
+            income.append({'name': acc.account_name, 'amount': balance})
+
+    return jsonify({
+        'income': income,
+        'expenses': expenses
+    })
