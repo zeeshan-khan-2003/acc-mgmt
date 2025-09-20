@@ -347,14 +347,18 @@ def delete_chart_of_account(account_id):
 @jwt_required()
 def get_sales_orders():
     sales_orders = SalesOrder.query.all()
-    return jsonify([{
-        'so_id': so.so_id,
-        'customer_id': so.customer_id,
-        'order_date': so.order_date.isoformat(),
-        'status_': so.status_,
-        'total_amount': so.total_amount,
-        'ref_no': so.ref_no
-    } for so in sales_orders])
+    results = []
+    for so in sales_orders:
+        customer = ContactsMaster.query.get(so.customer_id)
+        results.append({
+            'so_id': so.so_id,
+            'customer_name': customer.name if customer else 'N/A',
+            'order_date': so.order_date.isoformat(),
+            'status_': so.status_,
+            'total_amount': so.total_amount,
+            'ref_no': so.ref_no
+        })
+    return jsonify(results)
 
 @app.route('/api/sales-orders', methods=['POST'])
 @jwt_required()
@@ -400,18 +404,27 @@ def get_sales_order(so_id):
     if not sales_order:
         return jsonify({"msg": "Sales Order not found"}), 404
 
+    customer = ContactsMaster.query.get(sales_order.customer_id)
+    if not customer:
+        return jsonify({"msg": "Customer not found"}), 404
+
     items = SalesOrderItem.query.filter_by(so_id=so_id).all()
-    items_data = [{
-        'so_item_id': item.so_item_id,
-        'product_id': item.product_id,
-        'quantity': item.quantity,
-        'unit_price': item.unit_price,
-        'tax_id': item.tax_id
-    } for item in items]
+    items_data = []
+    for item in items:
+        product = ProductMaster.query.get(item.product_id)
+        items_data.append({
+            'so_item_id': item.so_item_id,
+            'product_id': item.product_id,
+            'product_name': product.product_name if product else 'N/A',
+            'quantity': item.quantity,
+            'unit_price': item.unit_price,
+            'tax_id': item.tax_id
+        })
 
     return jsonify({
         'so_id': sales_order.so_id,
         'customer_id': sales_order.customer_id,
+        'customer_name': customer.name,
         'order_date': sales_order.order_date.isoformat(),
         'status_': sales_order.status_,
         'total_amount': sales_order.total_amount,
