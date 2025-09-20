@@ -2,15 +2,15 @@
 import { useState } from "react";
 import {  X } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-
+import { useRouter } from "next/navigation";
 export default function StickyExpandableButton() {
   const [open, setOpen] = useState(false);
-
+  const router = useRouter();
   const items = [
-    { label: "Contact", onClick: () => alert("Card clicked") },
-    { label: "Product", onClick: () => alert("Product clicked") },
-    { label: "Taxes", onClick: () => alert("Taxes clicked") },
-    { label: "COA", onClick: () => alert("COA clicked") },
+    { label: "Contact", onClick: () => router.push("/admin/forms/contact") },
+    { label: "Product", onClick: () => router.push("/admin/forms/product") },
+    { label: "Taxes", onClick: () => router.push("/admin/forms/taxes") },
+    { label: "COA", onClick: () => router.push("/admin/forms/coa") },
   ];
 
   return (
