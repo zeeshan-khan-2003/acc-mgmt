@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -11,155 +11,124 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 
-
 export default function PartnerLedger() {
-  const [rows, setRows] = useState([])
+  const [partners, setPartners] = useState([])
+  const [selectedPartner, setSelectedPartner] = useState("")
+  const [ledgerType, setLedgerType] = useState("receivable")
+  const [ledgerData, setLedgerData] = useState([])
 
-  const [form, setForm] = useState({
-    partner: "",
-    account: "",
-    reference: "",
-    date: "",
-    due: "",
-    amount: "",
-    balance: "",
-  })
+  useEffect(() => {
+    const fetchPartners = async () => {
+      try {
+        const token = localStorage.getItem('jwtToken');
+        const response = await fetch("http://127.0.0.1:5000/api/contacts", {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setPartners(data);
+        }
+      } catch (error) {
+        console.error("Error fetching partners:", error);
+      }
+    };
+    fetchPartners();
+  }, []);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
-  }
-
-  const addRow = () => {
-    if (!form.partner || !form.account || !form.reference) return
-    setRows([...rows, form])
-    setForm({
-      partner: "",
-      account: "",
-      reference: "",
-      date: "",
-      due: "",
-      amount: "",
-      balance: "",
-    })
-  }
+  useEffect(() => {
+    if (selectedPartner && ledgerType) {
+      const fetchLedgerData = async () => {
+        try {
+          const token = localStorage.getItem('jwtToken');
+          const response = await fetch(`http://127.0.0.1:5000/api/partner-ledger?contact_id=${selectedPartner}&type=${ledgerType}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setLedgerData(data);
+          } else {
+            setLedgerData([]);
+          }
+        } catch (error) {
+          console.error("Error fetching ledger data:", error);
+          setLedgerData([]);
+        }
+      };
+      fetchLedgerData();
+    }
+  }, [selectedPartner, ledgerType]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <Card className="shadow-md rounded-2xl">
-        <CardHeader className="flex justify-between items-center">
+        <CardHeader>
           <CardTitle className="text-2xl font-semibold">
             Partner Ledger
           </CardTitle>
-          <div className="flex gap-2">
-            <Button variant="secondary">Print</Button>
-            <Button variant="secondary">Send</Button>
-            <Button variant="outline">Home</Button>
-
-            <Button variant="outline">Back</Button>
-          </div>
         </CardHeader>
 
         <CardContent>
-          {/* Add New Entry Form */}
-          <div className="grid grid-cols-7 gap-2 mb-6">
-            <div>
-              <Label>Partner</Label>
-              <Input
-                name="partner"
-                value={form.partner}
-                onChange={handleChange}
-                placeholder="Partner Name"
-              />
+          <div className="flex gap-4 mb-6">
+            <div className="w-1/3">
+                <Label>Partner</Label>
+                <Select onValueChange={setSelectedPartner} value={selectedPartner}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select a partner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {partners.map(p => (
+                            <SelectItem key={p.contact_id} value={p.contact_id.toString()}>
+                                {p.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
-            <div>
-              <Label>Account</Label>
-              <Input
-                name="account"
-                value={form.account}
-                onChange={handleChange}
-                placeholder="Account Name"
-              />
-            </div>
-            <div>
-              <Label>Reference</Label>
-              <Input
-                name="reference"
-                value={form.reference}
-                onChange={handleChange}
-                placeholder="Invoice / Bill Ref No."
-              />
-            </div>
-            <div>
-              <Label>Date</Label>
-              <Input
-                type="date"
-                name="date"
-                value={form.date}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <Label>Due</Label>
-              <Input
-                type="date"
-                name="due"
-                value={form.due}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <Label>Amount</Label>
-              <Input
-                type="number"
-                name="amount"
-                value={form.amount}
-                onChange={handleChange}
-                placeholder="0.00"
-              />
-            </div>
-            <div className="flex items-end">
-              <Button onClick={addRow} className="w-full">
-                Add Entry
-              </Button>
+            <div className="w-1/3">
+                <Label>Ledger Type</Label>
+                <Select onValueChange={setLedgerType} value={ledgerType}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select ledger type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="receivable">Receivable</SelectItem>
+                        <SelectItem value="payable">Payable</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
           </div>
 
-          {/* Ledger Table */}
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Partner Name</TableHead>
-                <TableHead>Account Name</TableHead>
-                <TableHead>Invoice / Bill Ref No.</TableHead>
-                <TableHead>Invoice / Bill Date</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Balance</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="text-right">Debit</TableHead>
+                <TableHead className="text-right">Credit</TableHead>
+                <TableHead className="text-right">Balance</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.length === 0 ? (
+              {ledgerData.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={5}
                     className="text-center text-muted-foreground"
                   >
-                    No entries added yet.
+                    No entries found.
                   </TableCell>
                 </TableRow>
               ) : (
-                rows.map((row, idx) => (
+                ledgerData.map((row, idx) => (
                   <TableRow key={idx}>
-                    <TableCell>{row.partner}</TableCell>
-                    <TableCell>{row.account}</TableCell>
-                    <TableCell>{row.reference}</TableCell>
-                    <TableCell>{row.date}</TableCell>
-                    <TableCell>{row.due}</TableCell>
-                    <TableCell>{row.amount}</TableCell>
-                    <TableCell>{row.balance}</TableCell>
+                    <TableCell>{new Date(row.date).toLocaleDateString()}</TableCell>
+                    <TableCell>{row.description}</TableCell>
+                    <TableCell className="text-right">{row.debit > 0 ? row.debit.toFixed(2) : ''}</TableCell>
+                    <TableCell className="text-right">{row.credit > 0 ? row.credit.toFixed(2) : ''}</TableCell>
+                    <TableCell className="text-right">{row.balance.toFixed(2)}</TableCell>
                   </TableRow>
                 ))
               )}

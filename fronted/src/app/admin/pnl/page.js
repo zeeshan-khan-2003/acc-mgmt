@@ -19,6 +19,14 @@ export default function ProfitLossReport() {
   useEffect(() => {
     async function fetchData() {
       try {
+        const token = localStorage.getItem('jwtToken');
+        if (!token) {
+          // Handle missing token
+          return;
+        }
+        const res = await fetch("http://127.0.0.1:5000/api/pnl", {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
         const data = await res.json()
         setExpenses(data.expenses || [])
         setIncome(data.income || [])
