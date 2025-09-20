@@ -1,36 +1,30 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Odoo - Accounting/ERP System - Frontend
 
-## Getting Started
+This document provides a detailed explanation of the frontend for the Odoo - Accounting/ERP System project.
 
-First, run the development server:
+**Note:** The frontend source code was not fully available, so this description is based on the backend API and general application structure.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Frontend Logic
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The frontend is a Next.js application that provides a user interface for the accounting and ERP system.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+- **Dashboard**: A dashboard to provide an overview of the business, including key metrics like total sales, purchases, and payments.
+- **Modules**: The frontend is likely organized into modules that correspond to the backend functionalities:
+  - **Contacts**: A module for managing customers and vendors.
+  - **Products**: A module for managing products and services.
+  - **Purchases**: A module for creating and managing purchase orders and vendor bills.
+  - **Sales**: A module for creating and managing sales orders and customer invoices.
+  - **Accounting**: A module for managing the chart of accounts, general ledger, and financial reports.
+- **API Interaction**: The frontend heavily interacts with the backend API to perform all its operations. This includes:
+  - Authenticating users.
+  - Performing CRUD (Create, Read, Update, Delete) operations on all the different modules.
+  - Fetching data for financial reports.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## UI Components
 
-## Learn More
+Based on the backend API, the frontend likely contains the following UI components:
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Tables**: To display lists of contacts, products, orders, invoices, etc.
+- **Forms**: To create and edit contacts, products, orders, invoices, etc.
+- **Charts**: To visualize financial data in the dashboard and reports.
+- **Navigation**: A sidebar or top navigation bar to switch between the different modules.
