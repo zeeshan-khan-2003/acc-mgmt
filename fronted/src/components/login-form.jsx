@@ -87,8 +87,8 @@ export function LoginForm({ className, ...props }) {
                 <Label htmlFor="loginId">Login ID</Label>
                 <Input
                   id="loginId"
-                  type="email"
-                  placeholder="m@example.com"
+                  type="text"
+                  placeholder="Enter login ID"
                   value={formData.loginId}
                   onChange={handleChange}
                   required
