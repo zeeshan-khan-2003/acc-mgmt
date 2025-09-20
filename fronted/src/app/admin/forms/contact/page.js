@@ -1,8 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Formsbar from "@/components/formbar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -149,8 +148,6 @@ export default function Page() {
 
   return (
     <>
-      <Formsbar />
-      <div className="flex flex-col items-center justify-center min-h-screen py-12 px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-md">
           <h2 className="text-center text-lg font-semibold mb-4">Contact</h2>
           <Card className="w-full max-w-md mx-auto">
@@ -232,7 +229,6 @@ export default function Page() {
             </CardContent>
           </Card>
         </div>
-      </div>
     </>
   )
 }

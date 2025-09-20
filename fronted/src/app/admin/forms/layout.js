@@ -1,30 +1,14 @@
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import "@/lib/health-check";
+import Formbar from "@/components/formsbar"
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata = {
-  title: "oddx admin",
-  description: "Admin panel for managing oddx",
-};
-
-export default function RootLayout({ children }) {
+export default function AdminFormsLayout({ children }) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
-    </html>
+    <>
+      <Formbar />
+      <div className="flex flex-col items-center justify-center min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+
+      {children}
+      </div>
+    </>
   );
 }
