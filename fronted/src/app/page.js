@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardHeader,
@@ -12,18 +12,37 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function SignUp() {
   const [formData, setFormData] = useState({
-    name: "",
+    username: "",
     loginId: "",
+    email: "",
     password: "",
     confirmPassword: "",
-    email: "",
   });
 
   // errors for each field
   const [errors, setErrors] = useState({});
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem("jwtToken");
+    if (token) {
+      fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/contacts`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }).then((res) => {
+        if (res.ok) {
+          router.push("/admin");
+        } else {
+          localStorage.removeItem("jwtToken");
+        }
+      });
+    }
+  }, [router]);
 
   function handleChange(e) {
     const { id, value } = e.target;
@@ -31,14 +50,14 @@ export default function SignUp() {
     setErrors((prev) => ({ ...prev, [id]: "" })); // clear error on input change
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
-    const { name, loginId, password, confirmPassword, email } = formData;
+    const { username, loginId, email, password, confirmPassword } = formData;
 
     const newErrors = {};
 
-    if (!name) newErrors.name = "Name is required";
+    if (!username) newErrors.username = "Username is required";
     if (!loginId) newErrors.loginId = "Login ID is required";
     if (!email) newErrors.email = "Email is required";
     if (!password) newErrors.password = "Password is required";
@@ -50,17 +69,32 @@ export default function SignUp() {
       return;
     }
 
-    // If no errors:
-    alert("User created successfully!");
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username,
+          loginId,
+          email,
+          password,
+        }),
+      });
 
-    setFormData({
-      name: "",
-      loginId: "",
-      password: "",
-      confirmPassword: "",
-      email: "",
-    });
-    
+      if (!response.ok) {
+        const data = await response.json();
+        setErrors({ general: data.msg || "Registration failed" });
+        return;
+      }
+
+      alert("User created successfully!");
+      router.push("/login");
+    } catch (err) {
+      console.error("Registration error:", err);
+      setErrors({ general: "Something went wrong. Please try again." });
+    }
   }
 
   return (
@@ -72,27 +106,26 @@ export default function SignUp() {
         <CardContent>
           <form className="flex flex-col space-y-4" onSubmit={handleSubmit}>
             <div className="flex flex-col">
-              <Label htmlFor="name" className="mb-2">
-                Name
+              <Label htmlFor="username" className="mb-2">
+                Username
               </Label>
               <Input
-                id="name"
-                placeholder="John Doe"
-                value={formData.name}
+                id="username"
+                placeholder="johndoe123"
+                value={formData.username}
                 onChange={handleChange}
               />
-              {errors.name && (
-                <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+              {errors.username && (
+                <p className="mt-1 text-sm text-red-600">{errors.username}</p>
               )}
             </div>
-
             <div className="flex flex-col">
               <Label htmlFor="loginId" className="mb-2">
                 Login ID
               </Label>
               <Input
                 id="loginId"
-                placeholder="johndoe123"
+                placeholder="johndoe"
                 value={formData.loginId}
                 onChange={handleChange}
               />
@@ -100,7 +133,6 @@ export default function SignUp() {
                 <p className="mt-1 text-sm text-red-600">{errors.loginId}</p>
               )}
             </div>
-
             <div className="flex flex-col">
               <Label htmlFor="email" className="mb-2">
                 Email
@@ -145,9 +177,14 @@ export default function SignUp() {
                 onChange={handleChange}
               />
               {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.confirmPassword}
+                </p>
               )}
             </div>
+            {errors.general && (
+              <p className="mt-1 text-sm text-red-600">{errors.general}</p>
+            )}
 
             <Button type="submit">Create</Button>
           </form>

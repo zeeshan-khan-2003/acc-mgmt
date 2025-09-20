@@ -36,13 +36,13 @@ export function LoginForm({ className, ...props }) {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/login", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          loginId: formData.loginId,
+          loginId : formData.loginId,
           password: formData.password,
         }),
       });
@@ -54,14 +54,14 @@ export function LoginForm({ className, ...props }) {
       }
 
       const data = await response.json();
-      const token = data.token; // assuming Flask returns { token: "JWT_TOKEN" }
+      const token = data.access_token; // assuming Flask returns { access_token: "JWT_TOKEN" }
 
       if (token) {
         // Save JWT token (localStorage, cookie, or context/state)
         localStorage.setItem("jwtToken", token);
 
         // Redirect or update UI accordingly
-        router.push("/dashboard"); // Change to your protected route
+        router.push("/admin"); // Change to your protected route
       } else {
         setError("Invalid response from server");
       }
