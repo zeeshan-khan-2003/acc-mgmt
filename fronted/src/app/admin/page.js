@@ -1,4 +1,6 @@
-import { NavigationMenuDemo } from "@/components/navbar"
+import Dashboard from "@/components/dashboard";
+import { NavigationMenuDemo } from "@/components/navbar";
+import StickyExpandableButton from "@/components/plusicon";
 
 export default function Page() {
   return (
@@ -9,8 +11,9 @@ export default function Page() {
 
       {/* Rest of your page content */}
       <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-        {/* Your other content here */}
+        <Dashboard />
+        <StickyExpandableButton />
       </div>
     </>
-  )
+  );
 }
