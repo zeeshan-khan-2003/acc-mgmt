@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import create_access_token, jwt_required, JWTManager
 from werkzeug.security import generate_password_hash
+from sqlalchemy import func
 
 from database import db
 from schema import (
@@ -9,7 +10,7 @@ from schema import (
     PurchaseOrderItem, TaxesMaster, ChartOfAccountsMaster, SalesOrder, 
     SalesOrderItem, VendorBill, CustomerInvoice, Payment, GeneralLedger
 )
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
@@ -812,3 +813,97 @@ def get_categories():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+@app.route('/api/balance-sheet', methods=['GET'])
+@jwt_required()
+def get_balance_sheet():
+    accounts = ChartOfAccountsMaster.query.all()
+    
+    assets = []
+    liabilities = []
+    equity = []
+    income = []
+    expenses = []
+
+    for acc in accounts:
+        debit_total = db.session.query(func.sum(GeneralLedger.debit)).filter(GeneralLedger.account_id == acc.account_id).scalar() or 0
+        credit_total = db.session.query(func.sum(GeneralLedger.credit)).filter(GeneralLedger.account_id == acc.account_id).scalar() or 0
+
+        balance = 0
+        if acc.type in ['Asset', 'Expense']:
+            balance = debit_total - credit_total
+        elif acc.type in ['Liability', 'Equity', 'Income']:
+            balance = credit_total - debit_total
+
+        if acc.type == 'Asset':
+            assets.append({'name': acc.account_name, 'amount': balance})
+        elif acc.type == 'Liability':
+            liabilities.append({'name': acc.account_name, 'amount': balance})
+        elif acc.type == 'Equity':
+            equity.append({'name': acc.account_name, 'amount': balance})
+        elif acc.type == 'Income':
+            income.append({'name': acc.account_name, 'amount': balance})
+        elif acc.type == 'Expense':
+            expenses.append({'name': acc.account_name, 'amount': balance})
+
+    total_income = sum(i['amount'] for i in income)
+    total_expenses = sum(e['amount'] for e in expenses)
+    net_income = total_income - total_expenses
+
+    # Add net income to equity
+    equity.append({'name': 'Retained Earnings', 'amount': net_income})
+
+    # Combine liabilities and equity for the balance sheet view
+    liabilities_and_equity = liabilities + equity
+
+    return jsonify({
+        'assets': assets,
+        'liabilities': liabilities_and_equity
+    })
+
+@app.route('/api/dashboard-stats', methods=['GET'])
+@jwt_required()
+def get_dashboard_stats():
+    now = datetime.utcnow()
+    
+    # Time deltas
+    day_ago = now - timedelta(days=1)
+    week_ago = now - timedelta(days=7)
+    month_ago = now - timedelta(days=30)
+
+    # Helper function to query sum
+    def get_total_sum(model, amount_col, date_col, start_date):
+        return db.session.query(func.sum(amount_col)).filter(date_col >= start_date).scalar() or 0
+
+    # Invoice stats
+    total_invoice_24h = get_total_sum(CustomerInvoice, CustomerInvoice.total_amount, CustomerInvoice.invoice_date, day_ago)
+    total_invoice_7d = get_total_sum(CustomerInvoice, CustomerInvoice.total_amount, CustomerInvoice.invoice_date, week_ago)
+    total_invoice_30d = get_total_sum(CustomerInvoice, CustomerInvoice.total_amount, CustomerInvoice.invoice_date, month_ago)
+
+    # Purchase stats
+    total_purchase_24h = get_total_sum(PurchaseOrder, PurchaseOrder.total_amount, PurchaseOrder.order_date, day_ago)
+    total_purchase_7d = get_total_sum(PurchaseOrder, PurchaseOrder.total_amount, PurchaseOrder.order_date, week_ago)
+    total_purchase_30d = get_total_sum(PurchaseOrder, PurchaseOrder.total_amount, PurchaseOrder.order_date, month_ago)
+
+    # Payment stats
+    total_payment_24h = get_total_sum(Payment, Payment.amount, Payment.payment_date, day_ago)
+    total_payment_7d = get_total_sum(Payment, Payment.amount, Payment.payment_date, week_ago)
+    total_payment_30d = get_total_sum(Payment, Payment.amount, Payment.payment_date, month_ago)
+
+    return jsonify({
+        'total_invoice': {
+            '24h': total_invoice_24h,
+            '7d': total_invoice_7d,
+            '30d': total_invoice_30d
+        },
+        'total_purchase': {
+            '24h': total_purchase_24h,
+            '7d': total_purchase_7d,
+            '30d': total_purchase_30d
+        },
+        'total_payment': {
+            '24h': total_payment_24h,
+            '7d': total_payment_7d,
+            '30d': total_payment_30d
+        }
+    })
