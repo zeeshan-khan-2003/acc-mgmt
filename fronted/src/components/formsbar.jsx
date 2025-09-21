@@ -16,9 +16,9 @@ export default function Formbar() {
 
       {/* Right side */}
       <div className="flex gap-2">
-        <Link href="/admin">
-          <Button variant="outline">Home</Button>
-        </Link>
+        <Button asChild variant="outline">
+          <Link href="/admin">Home</Link>
+        </Button>
         <Button variant="outline" onClick={() => router.back()}>
           Back
         </Button>

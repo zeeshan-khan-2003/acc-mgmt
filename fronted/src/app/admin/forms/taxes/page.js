@@ -1,133 +1,77 @@
 "use client"
 
-import { useState } from "react"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import PlusIcon from "@/components/plusicon"
 
-export default function TaxesMasterPage() {
-  const [taxName, setTaxName] = useState("")
-  const [taxComputation, setTaxComputation] = useState()
-  const [value, setValue] = useState("")
-  const [error, setError] = useState("")
+export default function TaxList() {
+  const router = useRouter()
+  const [taxes, setTaxes] = useState([])
 
-  const validateValue = (val) => {
-    if (!taxComputation) return
-
-    if (taxComputation === "percent") {
-      const num = parseFloat(val)
-      if (isNaN(num) || num < 0 || num > 100) {
-        setError("Value must be a percentage between 0 and 100")
-      } else {
-        setError("")
-      }
-    }
-
-    if (taxComputation === "fixed") {
-      const num = parseFloat(val)
-      if (isNaN(num) || num < 0) {
-        setError("Value must be a positive number")
-      } else {
-        setError("")
-      }
-    }
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    if (error) {
-      console.error("Cannot submit due to validation error")
+  useEffect(() => {
+    const token = localStorage.getItem("jwtToken")
+    if (!token) {
+      router.push("/login")
       return
     }
 
-    const taxData = {
-      tax_name: taxName,
-      computation_method: taxComputation === "percent" ? "Percentage" : "Fixed Value",
-      rate: parseFloat(value),
-    }
-
-    try {
-      const response = await fetch("http://127.0.0.1:5000/api/taxes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`,
-        },
-        body: JSON.stringify(taxData),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        console.log("Tax created:", data)
-        // Handle success (e.g., show a success message, redirect)
-      } else {
-        console.error("Failed to create tax")
-        // Handle error
+    const fetchTaxes = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:5000/api/taxes", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setTaxes(data)
+        } else {
+          console.error("Failed to fetch taxes")
+        }
+      } catch (error) {
+        console.error("Error fetching taxes:", error)
       }
-    } catch (error) {
-      console.error("Error:", error)
     }
-  }
 
-   return (
-    <>
-<Card className="shadow-md rounded-2xl w-full max-w-5xl mx-auto">
-        <CardHeader className="flex justify-between items-center">
-          <CardTitle className="text-2xl font-semibold">Taxes Master</CardTitle>
-        </CardHeader>
+    fetchTaxes()
+  }, [router])
 
-        <CardContent className="space-y-6 mt-4">
-          <div>
-            <Label htmlFor="taxName">Tax Name</Label>
-            {/* <br /> */}
-            <br />
-            <Input
-              id="taxName"
-              placeholder="5% GST S"
-              value={taxName}
-              onChange={(e) => setTaxName(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="taxComputation">Tax Computation</Label>
-            <Select onValueChange={(val) => setTaxComputation(val)}>
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder="% or Fixed Value" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="percent">Percentage</SelectItem>
-                <SelectItem value="fixed">Fixed Value</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="taxValue">Value</Label>
-            <br />
-            <Input
-              id="taxValue"
-              placeholder="say 5% or 5.00"
-              value={value}
-              disabled={!taxComputation}
-              onChange={(e) => {
-                setValue(e.target.value)
-                validateValue(e.target.value)
-              }}
-              className="mt-1"
-            />
-            {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
-          </div>
-        </CardContent>
-        <div className="flex justify-end p-6">
-          <Button onClick={handleSubmit}>Create Tax</Button>
-        </div>
-      </Card>
-    </>
+  return (
+    <div className="w-full max-w-4xl">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-semibold">Taxes</h2>
+        <Button onClick={() => router.push("/admin/forms/taxes/create")}>
+          Create Tax
+        </Button>
+      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Tax Name</TableHead>
+            <TableHead>Computation Method</TableHead>
+            <TableHead>Rate</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {taxes.map((tax) => (
+            <TableRow key={tax.tax_id}>
+              <TableCell>{tax.tax_name}</TableCell>
+              <TableCell>{tax.computation_method}</TableCell>
+              <TableCell>{tax.rate}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   )
-
 }
