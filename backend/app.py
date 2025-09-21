@@ -1,3 +1,4 @@
+import requests
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import create_access_token, jwt_required, JWTManager
@@ -656,7 +657,7 @@ def get_payments():
 def create_payment():
     data = request.get_json()
     bill_id = data.get('bill_id')
-    
+    invoice_id = data.get('invoice_id')
     new_payment = Payment(
         invoice_id=data.get('invoice_id'),
         bill_id=bill_id,
@@ -673,7 +674,12 @@ def create_payment():
             purchase_order = PurchaseOrder.query.get(vendor_bill.po_id)
             if purchase_order:
                 purchase_order.status = 'Billed'
-    
+    if invoice_id:
+        customer_invoice = CustomerInvoice.query.get(invoice_id)
+        if customer_invoice and customer_invoice.so_id:
+            sales_order = SalesOrder.query.get(customer_invoice.so_id)
+            if sales_order:
+                sales_order.status_ = True
     db.session.commit()
     return jsonify({"msg": "Payment created successfully", "payment_id": new_payment.payment_id}), 201
 
@@ -797,14 +803,49 @@ def delete_general_ledger_entry(entry_id):
     return jsonify({"msg": "General Ledger entry deleted successfully"})
 
 @app.route('/api/hsn-codes', methods=['GET'])
-def get_hsn_codes():
-    mock_hsn_codes = [
-        {"hsn_code": "851712", "description": "Telephones for cellular networks or for other wireless networks"},
-        {"hsn_code": "998314", "description": "IT (Information Technology) design and development services"},
-        {"hsn_code": "490110", "description": "Printed books, brochures, leaflets and similar printed matter, whether or not in single sheets"}
-    ]
-    return jsonify(mock_hsn_codes)
+def get_hsn_codes():    
+    query = request.args.get('query', '').strip()
 
+    if not query or len(query) < 3:
+        return jsonify([]), 200  # Return empty list if query is too short
+
+    # Determine type of search
+    if query.isdigit():
+        selected_type = "byCode"
+        category = "null"
+    else:
+        selected_type = "byDesc"
+        category = "P"  # Or "S" if you want to search services instead
+
+    try:
+        # Call the official GST HSN search API
+        response = requests.get(
+            "https://services.gst.gov.in/commonservices/hsn/search/qsearch",
+            params={
+                "inputText": query,
+                "selectedType": selected_type,
+                "category": category
+            },
+            timeout=5
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            hsn_data = data.get('data', [])
+
+            # Format response to match your frontend expectations
+            formatted = [
+                {"hsn_code": item.get("c"), "description": item.get("n")}
+                for item in hsn_data if item.get("c") and item.get("n")
+            ]
+
+            return jsonify(formatted), 200
+
+        return jsonify({"error": "Failed to fetch from GST API"}), 502
+
+    except requests.RequestException as e:
+        print("GST API Error:", str(e))
+        return jsonify({"error": "Error calling GST API"}), 500
 @app.route('/api/categories', methods=['GET'])
 def get_categories():
     categories = db.session.query(ProductMaster.category).distinct().all()
