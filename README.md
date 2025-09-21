@@ -3,6 +3,11 @@
 
 This project is a comprehensive accounting and ERP system.
 
+Link for explanation - 
+[▶ Watch Video](https://drive.google.com/file/d/1ZoZpX_T7twWueyk_05zrsGMIcLxahoxJ/view?usp=sharing)
+
+
+
 - **Backend**: Python with Flask and SQLAlchemy
 - **Frontend**: Next.js
 - **Features**:
