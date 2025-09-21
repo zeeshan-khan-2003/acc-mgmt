@@ -121,6 +121,8 @@ export default function Page() {
 
       console.log("Contact created successfully:", result)
       alert("Contact created successfully!")
+      window.location.href = '/admin/forms/contact';
+
 
       // Reset form
       setFormData({
