@@ -37,7 +37,7 @@ export default function SalesInvoice() {
       setView('detail');
       const fetchInvoiceData = async () => {
         try {
-          const response = await fetch(`http://localhost:5000/api/sales-orders/${soId}`, { headers });
+          const response = await fetch(`http://127.0.0.1:5000/api/sales-orders/${soId}`, { headers });
 
           if (response.ok) {
             const data = await response.json();
@@ -58,7 +58,7 @@ export default function SalesInvoice() {
       setView('list');
       const fetchSalesOrders = async () => {
         try {
-          const response = await fetch(`http://localhost:5000/api/sales-orders`, { headers });
+          const response = await fetch(`http://127.0.0.1:5000/api/sales-orders`, { headers });
           if (response.ok) {
             const data = await response.json();
             setSalesOrders(data);

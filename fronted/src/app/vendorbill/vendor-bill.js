@@ -37,7 +37,7 @@ export default function VendorBill() {
       setView('detail');
       const fetchBillData = async () => {
         try {
-          const response = await fetch(`http://localhost:5000/api/vendor-bill/${poId}`, { headers });
+          const response = await fetch(`http://127.0.0.1:5000/api/vendor-bill/${poId}`, { headers });
 
           if (response.ok) {
             const data = await response.json();
@@ -58,7 +58,7 @@ export default function VendorBill() {
       setView('list');
       const fetchPurchaseOrders = async () => {
         try {
-          const response = await fetch(`http://localhost:5000/api/purchase-orders`, { headers });
+          const response = await fetch(`http://127.0.0.1:5000/api/purchase-orders`, { headers });
           if (response.ok) {
             const data = await response.json();
             setPurchaseOrders(data);
