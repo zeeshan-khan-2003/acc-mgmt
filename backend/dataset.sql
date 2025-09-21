@@ -94,7 +94,7 @@ CREATE TABLE sales_orders (
     ref_no VARCHAR(10) GENERATED ALWAYS AS (CONCAT('REFS-', LPAD(ref_id, 4, '0'))) STORED,
 
     order_date DATE NOT NULL DEFAULT (date('now')),
-    -- status TEXT CHECK(status IN ('Draft', 'Confirmed', 'Invoiced', 'Cancelled')) DEFAULT 'Draft',
+    status TEXT CHECK(status IN ('Draft', 'Confirmed', 'Invoiced', 'Cancelled')) DEFAULT 'Draft',
     total_amount REAL,
     status_ BOOLEAN DEFAULT FALSE, 
     FOREIGN KEY (customer_id) REFERENCES Contacts_Master(contact_id)
@@ -120,7 +120,7 @@ CREATE TABLE customer_invoices (
     ref_no INTEGER AUTOINCREMENT,
     ref_no VARCHAR(10) GENERATED ALWAYS AS (CONCAT('RETL-', LPAD(ref_id, 4, '0'))) STORED,
 
-    status_ BOOLEAN DEFAULT FALSE, 
+    status TEXT CHECK(status IN ('Draft', 'Sent', 'Billed', 'Cancelled')) DEFAULT 'Draft',
     invoice_date DATE NOT NULL,
     due_date DATE NOT NULL,
     total_amount REAL NOT NULL,
