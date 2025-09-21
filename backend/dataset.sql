@@ -120,7 +120,7 @@ CREATE TABLE customer_invoices (
     ref_no INTEGER AUTOINCREMENT,
     ref_no VARCHAR(10) GENERATED ALWAYS AS (CONCAT('RETL-', LPAD(ref_id, 4, '0'))) STORED,
 
-
+    status_ BOOLEAN DEFAULT FALSE, 
     invoice_date DATE NOT NULL,
     due_date DATE NOT NULL,
     total_amount REAL NOT NULL,
